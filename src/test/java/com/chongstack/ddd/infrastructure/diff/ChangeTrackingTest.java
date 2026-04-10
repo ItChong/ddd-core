@@ -4,7 +4,6 @@ import com.chongstack.ddd.domain.model.BaseAggregate;
 import com.chongstack.ddd.domain.model.BaseEntity;
 import com.chongstack.ddd.domain.model.Identifier;
 import com.chongstack.ddd.infrastructure.repository.DbRepositorySupport;
-import com.chongstack.ddd.types.SingleValue;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
@@ -22,16 +21,14 @@ class ChangeTrackingTest {
 
     // -- 测试用 ID 类型 --
 
-    static class OrderId extends SingleValue<Long> {
-        public OrderId(Long value) {
-            super(value);
-        }
+    record OrderId (
+            Long value
+    ) implements Identifier{
     }
 
-    static class ItemId extends SingleValue<Long> {
-        public ItemId(Long value) {
-            super(value);
-        }
+    static record ItemId (
+            Long value
+    ) implements Identifier {
     }
 
     // -- 测试用领域模型 --
@@ -103,19 +100,19 @@ class ChangeTrackingTest {
 
         @Override
         protected Order onSelect(OrderId id) {
-            return store.get(id.getValue());
+            return store.get(id.value());
         }
 
         @Override
         protected void onUpdate(Order aggregate, EntityDiff diff) {
             updateCount++;
-            store.put(aggregate.getId().getValue(), aggregate);
+            store.put(aggregate.getId().value(), aggregate);
         }
 
         @Override
         protected void onDelete(Order aggregate) {
             deleteCount++;
-            store.remove(aggregate.getId().getValue());
+            store.remove(aggregate.getId().value());
         }
     }
 
