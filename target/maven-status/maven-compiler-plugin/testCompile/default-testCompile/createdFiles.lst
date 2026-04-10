@@ -1,9 +1,0 @@
-com/chongstack/ddd/domain/model/GuardTest.class
-com/chongstack/ddd/infrastructure/diff/ChangeTrackingTest$OrderStatus.class
-com/chongstack/ddd/infrastructure/diff/ChangeTrackingTest.class
-com/chongstack/ddd/infrastructure/diff/ChangeTrackingTest$LineItem.class
-com/chongstack/ddd/infrastructure/diff/ChangeTrackingTest$InMemoryOrderRepository.class
-com/chongstack/ddd/infrastructure/diff/ChangeTrackingTest$Order.class
-com/chongstack/ddd/domain/model/SpecificationTest.class
-com/chongstack/ddd/infrastructure/diff/ChangeTrackingTest$OrderId.class
-com/chongstack/ddd/infrastructure/diff/ChangeTrackingTest$ItemId.class
