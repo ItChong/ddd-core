@@ -2,7 +2,7 @@ package com.chongstack.ddd.infrastructure.repository;
 
 import com.chongstack.ddd.domain.model.Aggregate;
 import com.chongstack.ddd.domain.model.Identifier;
-import com.chongstack.ddd.infrastructure.diff.EntityDiff;
+import org.javers.core.diff.Diff;
 
 /**
  * 基于 ThreadLocal 的聚合管理器实现。
@@ -32,12 +32,18 @@ class ThreadLocalAggregateManager<T extends Aggregate<ID>, ID extends Identifier
     }
 
     @Override
-    public EntityDiff detectChanges(T aggregate) {
+    public Diff detectChanges(T aggregate) {
         return context.get().detectChanges(aggregate);
     }
 
     @Override
     public void merge(T aggregate) {
         context.get().merge(aggregate);
+    }
+
+    @Override
+    public void clear() {
+        context.get().clear();
+        context.remove();
     }
 }

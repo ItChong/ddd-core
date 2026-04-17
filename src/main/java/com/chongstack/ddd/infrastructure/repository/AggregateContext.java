@@ -2,9 +2,8 @@ package com.chongstack.ddd.infrastructure.repository;
 
 import com.chongstack.ddd.domain.model.Aggregate;
 import com.chongstack.ddd.domain.model.Identifier;
-import com.chongstack.ddd.infrastructure.diff.DiffUtils;
-import com.chongstack.ddd.infrastructure.diff.EntityDiff;
-import com.chongstack.ddd.infrastructure.diff.SnapshotUtils;
+import org.javers.core.Javers;
+import org.javers.core.diff.Diff;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,16 +34,22 @@ class AggregateContext<T extends Aggregate<ID>, ID extends Identifier> {
         return snapshotMap.get(id);
     }
 
-    EntityDiff detectChanges(T aggregate) {
+    /**
+     * 使用 JaVers 对比快照与当前聚合根的差异。
+     *
+     * @return JaVers 原生 Diff 结果；若聚合无 ID 则返回空 Diff
+     */
+    Diff detectChanges(T aggregate) {
         if (aggregate.getId() == null) {
-            return EntityDiff.EMPTY;
+            return JaversRegistry.emptyDiff();
         }
         T snapshot = snapshotMap.get(aggregate.getId());
         if (snapshot == null) {
             attach(aggregate);
             snapshot = snapshotMap.get(aggregate.getId());
         }
-        return DiffUtils.diff(snapshot, aggregate);
+        Javers javers = JaversRegistry.forType(aggregate.getClass());
+        return javers.compare(snapshot, aggregate);
     }
 
     void merge(T aggregate) {
@@ -52,5 +57,9 @@ class AggregateContext<T extends Aggregate<ID>, ID extends Identifier> {
             T snapshot = SnapshotUtils.snapshot(aggregate);
             snapshotMap.put(aggregate.getId(), snapshot);
         }
+    }
+
+    void clear() {
+        snapshotMap.clear();
     }
 }

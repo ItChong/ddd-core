@@ -1,9 +1,10 @@
-package com.chongstack.ddd.infrastructure.diff;
+package com.chongstack.ddd.infrastructure.repository;
 
 import com.chongstack.ddd.domain.model.BaseAggregate;
 import com.chongstack.ddd.domain.model.BaseEntity;
 import com.chongstack.ddd.domain.model.Identifier;
-import com.chongstack.ddd.infrastructure.repository.DbRepositorySupport;
+import org.javers.core.diff.Diff;
+import org.javers.core.diff.changetype.ValueChange;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
@@ -13,34 +14,31 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 验证参考文章中的核心场景：
- * 主子订单模型下，修改子订单价格同时改变主订单状态，
- * Change-Tracking 应该只识别出变更的部分。
+ * 验证基于 JaVers 的 Change-Tracking 核心场景：
+ * 主子订单模型下，修改子订单数量同时改变主订单状态，
+ * JaVers 应精确识别出变更的部分。
  */
 class ChangeTrackingTest {
 
     // -- 测试用 ID 类型 --
 
-    record OrderId (
-            Long value
-    ) implements Identifier{
+    record OrderId(Long value) implements Identifier {
     }
 
-    static record ItemId (
-            Long value
-    ) implements Identifier {
+    record ItemId(Long value) implements Identifier {
     }
 
     // -- 测试用领域模型 --
 
-    enum OrderStatus { CREATED, PAID }
+    enum OrderStatus {CREATED, PAID}
 
     static class LineItem extends BaseEntity<ItemId> implements Serializable {
         private Long itemId;
         private int quantity;
         private int price;
 
-        LineItem() {}
+        LineItem() {
+        }
 
         LineItem(ItemId id, Long itemId, int quantity, int price) {
             super(id);
@@ -53,8 +51,13 @@ class ChangeTrackingTest {
             this.quantity = newQuantity;
         }
 
-        int getQuantity() { return quantity; }
-        int getPrice() { return price; }
+        int getQuantity() {
+            return quantity;
+        }
+
+        int getPrice() {
+            return price;
+        }
     }
 
     static class Order extends BaseAggregate<OrderId> implements Serializable {
@@ -62,7 +65,8 @@ class ChangeTrackingTest {
         private OrderStatus status = OrderStatus.CREATED;
         private List<LineItem> lineItems = new ArrayList<>();
 
-        Order() {}
+        Order() {
+        }
 
         Order(OrderId id, Long userId) {
             super(id);
@@ -77,8 +81,13 @@ class ChangeTrackingTest {
             this.status = OrderStatus.PAID;
         }
 
-        OrderStatus getStatus() { return status; }
-        List<LineItem> getLineItems() { return lineItems; }
+        OrderStatus getStatus() {
+            return status;
+        }
+
+        List<LineItem> getLineItems() {
+            return lineItems;
+        }
     }
 
     // -- 测试用内存仓储 --
@@ -104,7 +113,7 @@ class ChangeTrackingTest {
         }
 
         @Override
-        protected void onUpdate(Order aggregate, EntityDiff diff) {
+        protected void onUpdate(Order aggregate, Diff diff) {
             updateCount++;
             store.put(aggregate.getId().value(), aggregate);
         }
@@ -135,7 +144,6 @@ class ChangeTrackingTest {
         Order order = new Order(null, 100L);
         repo.save(order);
 
-        // 第二次保存，无任何变更
         repo.save(order);
 
         assertThat(repo.insertCount).isEqualTo(1);
@@ -150,7 +158,6 @@ class ChangeTrackingTest {
         order.addLineItem(new LineItem(new ItemId(2L), 20L, 2, 200));
         repo.save(order);
 
-        // 修改子订单数量 + 主订单状态
         order.getLineItems().getFirst().changeQuantity(3);
         order.pay();
         repo.save(order);
@@ -160,7 +167,7 @@ class ChangeTrackingTest {
     }
 
     @Test
-    void diff_shouldDetectSelfModifiedAndListChanges() {
+    void detectChanges_shouldReportValueChangesOnRootAndChild() {
         Order snapshot = new Order(new OrderId(1L), 100L);
         snapshot.addLineItem(new LineItem(new ItemId(1L), 10L, 5, 100));
         snapshot.addLineItem(new LineItem(new ItemId(2L), 20L, 2, 200));
@@ -169,20 +176,17 @@ class ChangeTrackingTest {
         current.pay();
         current.getLineItems().getFirst().changeQuantity(3);
 
-        EntityDiff diff = DiffUtils.diff(snapshot, current);
+        Diff diff = JaversRegistry.forType(Order.class).compare(snapshot, current);
 
-        assertThat(diff.isEmpty()).isFalse();
-        assertThat(diff.isSelfModified()).isTrue();
+        assertThat(diff.hasChanges()).isTrue();
 
-        Diff lineItemDiff = diff.getDiff("lineItems");
-        assertThat(lineItemDiff).isInstanceOf(ListDiff.class);
-        ListDiff listDiff = (ListDiff) lineItemDiff;
-        assertThat(listDiff.isChanged()).isTrue();
+        List<ValueChange> valueChanges = diff.getChangesByType(ValueChange.class);
 
-        long modifiedCount = listDiff.getElementDiffs().stream()
-                .filter(d -> d.getType() == DiffType.MODIFIED)
-                .count();
-        assertThat(modifiedCount).isEqualTo(1);
+        assertThat(valueChanges)
+                .anyMatch(vc -> "status".equals(vc.getPropertyName()));
+
+        assertThat(valueChanges)
+                .anyMatch(vc -> "quantity".equals(vc.getPropertyName()));
     }
 
     @Test
@@ -208,7 +212,6 @@ class ChangeTrackingTest {
         Order found = repo.find(order.getId());
         assertThat(found).isNotNull();
 
-        // 无变更再次保存，不应触发 update
         repo.save(found);
         assertThat(repo.updateCount).isEqualTo(0);
     }

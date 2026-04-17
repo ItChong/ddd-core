@@ -1,4 +1,4 @@
-package com.chongstack.ddd.infrastructure.diff;
+package com.chongstack.ddd.infrastructure.repository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,7 +7,6 @@ import java.io.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.RecordComponent;
 import java.util.*;
 
 /**
@@ -16,7 +15,7 @@ import java.util.*;
  * 优先使用 Java 序列化进行深拷贝，若对象未实现 Serializable 则回退到反射拷贝。
  * 快照是 Change-Tracking 的基础：查询时保存一份快照，保存时与当前状态对比。
  */
-public final class SnapshotUtils {
+final class SnapshotUtils {
 
     private static final Logger log = LoggerFactory.getLogger(SnapshotUtils.class);
 
@@ -24,7 +23,7 @@ public final class SnapshotUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> T snapshot(T source) {
+    static <T> T snapshot(T source) {
         if (source == null) {
             return null;
         }
@@ -135,7 +134,6 @@ public final class SnapshotUtils {
             ctor.setAccessible(true);
             return ctor.newInstance();
         } catch (NoSuchMethodException e) {
-            // JDK 内部 API 回退：Unsafe.allocateInstance
             var unsafeClass = Class.forName("sun.misc.Unsafe");
             var unsafeField = unsafeClass.getDeclaredField("theUnsafe");
             unsafeField.setAccessible(true);
