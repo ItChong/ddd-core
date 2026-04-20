@@ -36,6 +36,14 @@ final class JaversRegistry {
 
     /**
      * 获取或创建指定聚合根类型对应的 JaVers 实例。
+     * <p>
+     * 缓存以 Class 对象为 key。在 Spring Boot DevTools 热重启后，
+     * RestartClassLoader 产出全新的 Class 对象，天然与旧缓存隔离，
+     * 不会命中旧 ClassLoader 对应的 Javers 实例。
+     * 旧条目会随旧 Class 被 GC 回收（ConcurrentHashMap 的 key 是强引用，
+     * 但 DevTools 会卸载整个旧 RestartClassLoader 树）。
+     * <p>
+     * 若需主动清理，可调用 {@link #clearCache()}。
      */
     static Javers forType(Class<?> rootClass) {
         return CACHE.computeIfAbsent(rootClass, clazz -> {
@@ -44,6 +52,15 @@ final class JaversRegistry {
             scanAndRegisterEntityTypes(builder, clazz, visited);
             return builder.build();
         });
+    }
+
+    /**
+     * 清除所有缓存的 JaVers 实例。
+     * 在 ClassLoader 发生变更（如 DevTools 热重启）时调用，
+     * 防止旧 ClassLoader 的类残留在缓存中。
+     */
+    static void clearCache() {
+        CACHE.clear();
     }
 
     /**
