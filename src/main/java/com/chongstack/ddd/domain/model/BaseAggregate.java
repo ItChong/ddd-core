@@ -33,6 +33,9 @@ public abstract class BaseAggregate<ID extends Identifier> extends BaseEntity<ID
         domainEvents.add(event);
     }
 
+    /**
+     * 返回已注册领域事件的只读视图（不清除）。
+     */
     public List<DomainEvent> getDomainEvents() {
         if (domainEvents == null) {
             return Collections.emptyList();
@@ -40,6 +43,27 @@ public abstract class BaseAggregate<ID extends Identifier> extends BaseEntity<ID
         return Collections.unmodifiableList(domainEvents);
     }
 
+    /**
+     * 取出已注册的领域事件并清空。
+     * <p>
+     * Application Service 在持久化聚合后调用此方法获取事件用于发布。
+     * 返回值是独立副本，调用后聚合不再持有这些事件。
+     */
+    public List<DomainEvent> pullDomainEvents() {
+        if (domainEvents == null || domainEvents.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<DomainEvent> snapshot = List.copyOf(domainEvents);
+        domainEvents.clear();
+        return snapshot;
+    }
+
+    /**
+     * 清除所有已注册的领域事件。
+     * <p>
+     * 框架生命周期方法，通常不需要在业务代码中直接调用；
+     * 优先使用 {@link #pullDomainEvents()} 取出并清空。
+     */
     public void clearDomainEvents() {
         if (domainEvents != null) {
             domainEvents.clear();

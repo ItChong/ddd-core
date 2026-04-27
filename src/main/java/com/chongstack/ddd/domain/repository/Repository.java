@@ -3,6 +3,8 @@ package com.chongstack.ddd.domain.repository;
 import com.chongstack.ddd.domain.model.Aggregate;
 import com.chongstack.ddd.domain.model.Identifier;
 
+import java.util.Optional;
+
 /**
  * 仓储基础接口。
  * <p>
@@ -18,24 +20,12 @@ import com.chongstack.ddd.domain.model.Identifier;
 public interface Repository<T extends Aggregate<ID>, ID extends Identifier> {
 
     /**
-     * 将聚合附加到仓储进行变更追踪（可选能力）。
-     */
-    default void attach(T aggregate) {
-    }
-
-    /**
-     * 解除聚合的变更追踪（可选能力）。
-     */
-    default void detach(T aggregate) {
-    }
-
-    /**
      * 根据 ID 查找聚合根。
      *
-     * @param id 聚合根 ID
-     * @return 聚合根，不存在时返回 null
+     * @param id 聚合根 ID，不能为 null
+     * @return 包含聚合根的 Optional，不存在时返回 empty
      */
-    T find(ID id);
+    Optional<T> find(ID id);
 
     /**
      * 保存聚合根（新增或更新）。

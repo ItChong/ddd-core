@@ -1,16 +1,13 @@
 package com.chongstack.ddd.domain.model;
 
-import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * 实体基类，提供 ID 管理和基于 ID 的相等性判断。
- * <p>
- * 实现 Serializable 以支持变更追踪中的快照机制。
  *
  * @param <ID> 标识类型
  */
-public abstract class BaseEntity<ID extends Identifier> implements Entity<ID>, Serializable {
+public abstract class BaseEntity<ID extends Identifier> implements Entity<ID> {
 
     private ID id;
 
